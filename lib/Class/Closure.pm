@@ -24,14 +24,13 @@ our @EXPORT = qw(
 	destroy
 );
 
-my @SCAN;
 our $VTABLE;
 our $PACKAGE;
 
 sub import {
 	my ($class) = @_;
 	my $package = caller;
-	push @SCAN, $package;
+	*{"$package\::new"} = _make_new(\&{"$package\::CLASS"});
 	goto &Exporter::import;
 }
 
@@ -178,12 +177,6 @@ sub extends($) {
 
 sub destroy(&) {
 	${"$PACKAGE\::DESTROY"} = Class::Closure::DestroyDelegate->new($_[0]);
-}
-
-CHECK {
-	for my $package (@SCAN) {
-		*{"$package\::new"} = _make_new(\&{"$package\::CLASS"});
-	}
 }
 
 package Class::Closure::DestroyDelegate;
