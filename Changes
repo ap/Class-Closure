@@ -1,0 +1,11 @@
+=head1 Revision history for Class-Closure
+
+=head2 0.22 (2010-06-06)
+
+=over 4
+
+=item * Switch to Dist::Zilla
+
+=back
+
+=for vim vi:tw=72:ft=pod
