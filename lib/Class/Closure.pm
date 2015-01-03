@@ -179,6 +179,10 @@ sub destroy(&) {
 	${"$PACKAGE\::DESTROY"} = Class::Closure::DestroyDelegate->new($_[0]);
 }
 
+#######################################################################
+
+use strict;
+
 package Class::Closure::DestroyDelegate;
 
 sub new {
@@ -198,11 +202,11 @@ sub TIESCALAR {
 }
 
 sub FETCH {
-	$_[0]->{get}->($ref);
+	$_[0]->{get}->($_[0]->{ref});
 }
 
 sub STORE {
-	$_[0]->{set}->($ref, $_[1]);
+	$_[0]->{set}->($_[0]->{ref}, $_[1]);
 }
 
 1;
