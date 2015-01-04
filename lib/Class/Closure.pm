@@ -179,24 +179,12 @@ sub accessor ($@) {
 
 sub extends($) { &$EXTENDS }
 
-sub destroy(&) {
-	_install DESTROY => \Class::Closure::DestroyDelegate->new($_[0]);
-}
-
-#######################################################################
-
-use strict;
+sub destroy(&) { _install DESTROY => \Class::Closure::DestroyDelegate->new( $_[0] ) }
 
 package Class::Closure::DestroyDelegate;
 
-sub new {
-	my ($class, $code) = @_;
-	bless $code => ref $class || $class;
-}
-
-sub DESTROY {
-	goto &{$_[0]};
-}
+sub new { bless $_[1] }
+sub DESTROY { goto &{$_[0]} }
 
 1;
 
