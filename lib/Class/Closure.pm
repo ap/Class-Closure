@@ -46,21 +46,19 @@ sub _make_new {
 
 		_install ISA => [ $base ];
 
+		my ( @reblessed, @subisa, %subobj );
+
 		_install DESTROY => sub {
-			no strict 'refs';
-			for (@{"$package\::CCREBLESSED"}) {  # bless them back into their original class
-				bless $_->[0] => $_->[1];
+			for (@reblessed) {  # bless them back into their original class
+				bless $_->[0], $_->[1];
 			}
 			Symbol::delete_package($package);
 		};
 
 		_install isa => sub {
-			no strict 'refs';
 			my ($self, $class) = @_;
-			return 1 if $base->isa($class);
-			for (@{"$package\::CCSUBISA"}) {
-				return 1 if $_->isa($class);
-			}
+			do { return 1 if $base->isa($class) };
+			do { return 1 if $_->isa($class) } for @subisa;
 			return;
 		};
 
@@ -72,14 +70,12 @@ sub _make_new {
 			}
 
 			my $pack = ref $var;
-			bless $var => $PACKAGE;  # Rebless for virtual behavior
+			bless $var, $PACKAGE;  # Rebless for virtual behavior
 
-			no strict 'refs';
+			push @reblessed, [ $var, $pack ];  # bookkeeping for DESTROY
 
-			push @{"$PACKAGE\::CCREBLESSED"}, [ $var => $pack ];  # bookkeeping for DESTROY
-
-			push @{"$PACKAGE\::CCSUBISA"}, $pack;
-			${"$PACKAGE\::CCSUBOBJ"}{$pack} = $var;
+			push @subisa, $pack;
+			$subobj{$pack} = $var;
 
 			return;
 		};
@@ -91,8 +87,8 @@ sub _make_new {
 				return $code;
 			}
 			else {
-				for my $pack (@{"$package\::CCSUBISA"}) {
-					my $packobj = ${"$package\::CCSUBOBJ"}{$pack};
+				for my $pack (@subisa) {
+					my $packobj = $subobj{$pack};
 					if (my $code = $pack->can($method)) {
 						return *{"$package\::$method"} = sub {
 							splice @_, 0, 1, $packobj;
