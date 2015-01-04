@@ -26,16 +26,11 @@ our @EXPORT = qw(
 
 our $PACKAGE;
 
-sub import {
-	my ($class) = @_;
-	my $package = caller;
-	*{"$package\::new"} = _make_new(\&{"$package\::CLASS"});
-	goto &Exporter::import;
-}
+sub import { _make_new( scalar caller ); goto &Exporter::import }
 
 sub _make_new {
-	my ($code) = @_;
-	sub {
+	my ($pkg) = @_;
+	my $new = sub {
 		my $base = ref $_[0] || $_[0];
 		local $PACKAGE = my $package = _make_package();
 
@@ -91,7 +86,7 @@ sub _make_new {
 			}
 		};
 
-		$code->(@_);
+		$pkg->can('CLASS')->(@_);
 
 		my $self = bless {} => $PACKAGE;
 
@@ -99,6 +94,8 @@ sub _make_new {
 
 		$self;
 	};
+
+	*{"$pkg\::new"} = $new;
 }
 
 {
