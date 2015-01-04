@@ -72,7 +72,6 @@ sub _make_new {
 			else {
 				for my $pack (@{"$package\::CCSUBISA"}) {
 					my $packobj = ${"$package\::CCSUBOBJ"}{$pack};
-					my $can = "$pack\::can";
 					if (my $code = $pack->can($method)) {
 						return *{"$package\::$method"} = sub {
 							splice @_, 0, 1, $packobj;
