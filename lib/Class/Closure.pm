@@ -24,7 +24,6 @@ our @EXPORT = qw(
 	destroy
 );
 
-our $VTABLE;
 our $PACKAGE;
 
 sub import {
@@ -38,9 +37,7 @@ sub _make_new {
 	my ($code) = @_;
 	sub {
 		my $base = ref $_[0] || $_[0];
-		local $PACKAGE = _make_package();
-		local $VTABLE = bless { } => $PACKAGE;
-		my $package = $PACKAGE;
+		local $PACKAGE = my $package = _make_package();
 
 		@{"$PACKAGE\::ISA"} = ($base);
 
@@ -96,9 +93,11 @@ sub _make_new {
 
 		$code->(@_);
 
-		$VTABLE->can('BUILD') && $VTABLE->BUILD(@_[1..$#_]);
+		my $self = bless {} => $PACKAGE;
 
-		$VTABLE;
+		$self->BUILD(@_[1..$#_]) if $self->can('BUILD');
+
+		$self;
 	};
 }
 
