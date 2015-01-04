@@ -81,21 +81,20 @@ sub _make_new {
 		};
 
 		_install can => sub {
-			no strict 'refs';
-			my ($self, $method) = @_;
-			if (my $code = *{"$package\::$method"}{CODE}) {
-				return $code;
-			}
-			else {
-				for my $pack (@subisa) {
-					my $packobj = $subobj{$pack};
-					if (my $code = $pack->can($method)) {
-						return *{"$package\::$method"} = sub {
-							splice @_, 0, 1, $packobj;
-							goto &$code;
-						};
-					}
-				}
+			my ( $self, $method ) = @_;
+
+			my $code = do { no strict 'refs'; *{"$package\::$method"}{CODE} };
+			return $code if $code;
+
+			for my $pkg ( @subisa ) {
+				my $obj = $subobj{$pkg};
+				$code = $pkg->can($method) or next;
+				my $delegate = sub {
+					splice @_, 0, 1, $obj;
+					goto &$code;
+				};
+				{ no strict 'refs'; *{"$package\::$method"} = $delegate };
+				return $delegate;
 			}
 			return;
 		};
