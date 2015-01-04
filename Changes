@@ -1,5 +1,9 @@
 Revision history for Class-Closure
 
+0.301 Sun  4 Jan 2015
+	- Switched lvalue accessors to using Sentinel for better performance
+	- Sanitised code as far as possible
+
 0.30 Sun  6 Jun 2010
 	- Do code generation at C<import> time, remove use of C<CHECK> block
 	  Fixes #58046 (Uses CHECK block)

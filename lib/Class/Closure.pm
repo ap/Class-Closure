@@ -184,6 +184,8 @@ sub DESTROY { goto &{$_[0]} }
 
 1;
 
+__END__
+
 =head1 SYNOPSIS
 
  package Dog;
@@ -417,3 +419,7 @@ code. Bug reports/patches welcome.
 =head1 SEE ALSO
 
 L<Class::Struct>, L<Class::Classless>
+
+=head1 COPYRIGHT AND LICENSE
+
+This documentation is copyright (c) 2004 by Luke Palmer.
