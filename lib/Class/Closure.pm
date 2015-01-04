@@ -5,8 +5,8 @@ package Class::Closure;
 use 5.006;
 no warnings;
 
-use Exporter;
-use Carp;
+use Exporter ();
+use Carp ();
 use Symbol ();
 use PadWalker ();
 use Devel::Caller ();
@@ -90,7 +90,7 @@ sub _make_new {
 				goto &$fallback;
 			}
 			else {
-				croak "Method $AUTOLOAD not found in class $base";
+				Carp::croak "Method $AUTOLOAD not found in class $base";
 			}
 		};
 
@@ -112,7 +112,7 @@ sub _make_package {
 sub _find_name {
 	my ($var, $code) = @_;
 	my %names = reverse %{PadWalker::peek_sub($code)};
-	my $name = $names{$var} || croak "Couldn't find lexical name for $var";
+	my $name = $names{$var} || Carp::croak "Couldn't find lexical name for $var";
 	$name =~ s/^[\$\@%]//;
 	$name;
 }
@@ -143,7 +143,7 @@ sub method($&) {
 
 sub accessor($@) {
 	my ($name, %pairs) = @_;
-	croak "accessor needs 'get' and 'set' attributes" unless $pairs{get} && $pairs{set};
+	Carp::croak "accessor needs 'get' and 'set' attributes" unless $pairs{get} && $pairs{set};
 	*{"$PACKAGE\::$name"} = sub : lvalue {
 		tie my $del, 'Class::Closure::LValueDelegate', $_[0], $pairs{get}, $pairs{set};
 		$del;
