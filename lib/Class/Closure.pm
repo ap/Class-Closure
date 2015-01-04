@@ -130,10 +130,8 @@ sub public(\$) : lvalue {
 	my ($var) = @_;
 
 	my $name = _find_name $var, Devel::Caller::caller_cv(1);
-	eval << "EOC";
-		package $PACKAGE;
-		sub $name : lvalue { \$\$var }
-EOC
+
+	*{"$PACKAGE\::$name"} = sub : lvalue { $$var };
 	$$var;
 }
 
@@ -146,17 +144,12 @@ sub method($&) {
 sub accessor($@) {
 	my ($name, %pairs) = @_;
 	croak "accessor needs 'get' and 'set' attributes" unless $pairs{get} && $pairs{set};
-	eval << "EOC";
-		package $PACKAGE;
-		sub $name : lvalue {
-			tie my \$del => Class::Closure::LValueDelegate,
-					\$_[0], \$pairs{get}, \$pairs{set};
-			\$del;
-		}
-EOC
+	*{"$PACKAGE\::$name"} = sub : lvalue {
+		tie my $del, 'Class::Closure::LValueDelegate', $_[0], $pairs{get}, $pairs{set};
+		$del;
+	};
 	return;
 }
-
 
 sub extends($) {
 	my ($var) = @_;
