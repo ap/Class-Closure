@@ -4,6 +4,7 @@ package Class::Closure;
 
 use 5.006;
 use warnings;
+use strict;
 
 use Exporter ();
 use Carp ();
@@ -28,22 +29,32 @@ our $PACKAGE;
 
 sub import { _make_new( scalar caller ); goto &Exporter::import }
 
+sub _install ($$) {
+	my ( $name, $thing ) = @_;
+	no strict 'refs';
+	*{"$PACKAGE\::$name"} = $thing;
+}
+
 sub _make_new {
 	my ($pkg) = @_;
-	my $new = sub {
+
+	$PACKAGE = $pkg;
+	_install new => sub {
 		my $base = ref $_[0] || $_[0];
 		local $PACKAGE = my $package = _make_package();
 
-		@{"$PACKAGE\::ISA"} = ($base);
+		_install ISA => [ $base ];
 
-		*{"$PACKAGE\::DESTROY"} = sub {
+		_install DESTROY => sub {
+			no strict 'refs';
 			for (@{"$package\::CCREBLESSED"}) {  # bless them back into their original class
 				bless $_->[0] => $_->[1];
 			}
 			Symbol::delete_package($package);
 		};
 
-		*{"$PACKAGE\::isa"} = sub {
+		_install isa => sub {
+			no strict 'refs';
 			my ($self, $class) = @_;
 			return 1 if $base->isa($class);
 			for (@{"$package\::CCSUBISA"}) {
@@ -52,7 +63,8 @@ sub _make_new {
 			return;
 		};
 
-		*{"$PACKAGE\::can"} = sub {
+		_install can => sub {
+			no strict 'refs';
 			my ($self, $method) = @_;
 			if (my $code = *{"$package\::$method"}{CODE}) {
 				return $code;
@@ -72,12 +84,13 @@ sub _make_new {
 			return;
 		};
 
-		*{"$PACKAGE\::AUTOLOAD"} = sub {
-			$AUTOLOAD =~ s/.*:://;
+		_install AUTOLOAD => sub {
+			our $AUTOLOAD =~ s/.*:://;
 			if (my $code = $_[0]->can($AUTOLOAD)) {
 				goto &$code;
 			}
 			elsif (my $fallback = $_[0]->can('FALLBACK')) {
+				no strict 'refs';
 				local *{"$base\::AUTOLOAD"} = \$AUTOLOAD;
 				goto &$fallback;
 			}
@@ -94,8 +107,6 @@ sub _make_new {
 
 		$self;
 	};
-
-	*{"$pkg\::new"} = $new;
 }
 
 {
@@ -118,7 +129,7 @@ sub has(\$) : lvalue {
 
 	my $name = _find_name $var, Devel::Caller::caller_cv(1);
 
-	*{"$PACKAGE\::$name"} = sub { $$var };
+	_install $name, sub { $$var };
 	$$var;
 }
 
@@ -127,13 +138,12 @@ sub public(\$) : lvalue {
 
 	my $name = _find_name $var, Devel::Caller::caller_cv(1);
 
-	*{"$PACKAGE\::$name"} = sub : lvalue { $$var };
+	_install $name, sub : lvalue { $$var };
 	$$var;
 }
 
 sub method($&) {
-	my ($name, $code) = @_;
-	*{"$PACKAGE\::$name"} = $code;
+	&_install;
 	return;
 }
 
@@ -141,7 +151,7 @@ sub accessor ($@) {
 	my ( $name, %arg ) = @_;
 	Carp::croak "accessor needs 'get' and 'set' attributes" unless $arg{'get'} && $arg{'set'};
 	require Sentinel;
-	*{"$PACKAGE\::$name"} = sub : lvalue {
+	_install $name, sub : lvalue {
 		my $self = shift;
 		Sentinel::sentinel(
 			get => sub { $arg{'get'}->( $self ) },
@@ -160,6 +170,9 @@ sub extends($) {
 
 	my $pack = ref $var;
 	bless $var => $PACKAGE;  # Rebless for virtual behavior
+
+	no strict 'refs';
+
 	push @{"$PACKAGE\::CCREBLESSED"}, [ $var => $pack ];  # bookkeeping for DESTROY
 
 	push @{"$PACKAGE\::CCSUBISA"}, $pack;
@@ -169,7 +182,7 @@ sub extends($) {
 }
 
 sub destroy(&) {
-	${"$PACKAGE\::DESTROY"} = Class::Closure::DestroyDelegate->new($_[0]);
+	_install DESTROY => \Class::Closure::DestroyDelegate->new($_[0]);
 }
 
 #######################################################################
