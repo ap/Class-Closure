@@ -6,123 +6,114 @@ use 5.006;
 use warnings;
 use strict;
 
-use Exporter ();
+use Exporter::Tidy default => [qw( has public method destroy accessor extends )];
+
 use Carp ();
 use Symbol ();
+use Scalar::Util ();
+use Package::Anon ();
 
-our @ISA = qw(Exporter);
+{ no warnings 'redefine'; *import = do {
+	my $real_import = \&import;
+	sub { _make_new( scalar caller ); goto &$real_import }
+} }
 
-our @EXPORT = qw(
-	has
-	public
-	method
-	accessor
-	extends
-	does
-	destroy
-);
-
-our $PACKAGE;
+our $STASH;
 our $EXTENDS;
-
-sub import { _make_new( scalar caller ); goto &Exporter::import }
 
 sub _install ($$) {
 	my ( $name, $thing ) = @_;
-	no strict 'refs';
-	*{ "$PACKAGE\::$name" } = $thing;
+	*{ $STASH->install_glob( $name ) } = $thing;
 }
 
 sub _make_new {
 	my ( $pkg ) = @_;
 
-	$PACKAGE = $pkg;
-	_install new => sub {
-		my $base = ref $_[0] || $_[0];
-		local $PACKAGE = my $package = _make_package();
+	my $new = sub {
+		my $base = $_[0];
+
+		local $STASH = Package::Anon->new( "($base)" );
+
+		my $self = do {
+			my $stash = $STASH;
+			Scalar::Util::weaken $stash;
+			$STASH->bless( \$stash );
+		};
 
 		_install ISA => [ $base ];
 
-		my ( @reblessed, @subisa, %subobj );
-
-		_install DESTROY => sub {
-			bless $_->[0], $_->[1] for @reblessed; # bless them back into their original class
-			Symbol::delete_package( $package );
-		};
+		my @objisa;
 
 		_install isa => sub {
 			my ( $self, $class ) = @_;
 			do { return 1 if $base->isa( $class ) };
-			do { return 1 if $_->isa( $class ) } for @subisa;
+			do { return 1 if $_->isa( $class ) } for @objisa;
 			return;
 		};
 
 		local $EXTENDS = sub {
-			my ( $var ) = @_;
-
-			$var = $var->new if not ref $var;
-
-			my $pkg = ref $var;
-			bless $var, $PACKAGE;  # Rebless for virtual behavior
-
-			push @reblessed, [ $var, $pkg ];  # bookkeeping for DESTROY
-
-			push @subisa, $pkg;
-			$subobj{ $pkg } = $var;
-
+			my ( $obj ) = @_;
+			$obj = $obj->new if not ref $obj;
+			my $stash = Package::Anon->new;
+			if ( eval { 'Package::Anon' eq ref $$obj } ) {
+				# FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME
+			}
+			else {
+				my $parent = $self;
+				Scalar::Util::weaken $parent;
+				my $pkg = ref $obj;
+				*{ $stash->install_glob( 'ISA' ) } = [ $pkg ];
+				*{ $stash->install_glob( 'AUTOLOAD' ) } = sub {
+					our $AUTOLOAD =~ s/.*:://;
+					if ( my $method = $parent->can( $AUTOLOAD ) ) {
+						my $delegate = sub {
+							splice @_, 0, 1, $parent;
+							goto &$method;
+						};
+						*{ $stash->install_glob( $method ) } = $delegate;
+						goto &$delegate;
+					}
+					Carp::croak "Method $AUTOLOAD not found in class $base";
+				};
+			}
+			$stash->bless( $obj );
+			Scalar::Util::weaken $stash;
 			return;
 		};
 
 		_install can => sub {
-			my ( $self, $method ) = @_;
-
-			my $code = do { no strict 'refs'; *{ "$package\::$method" }{'CODE'} };
-			return $code if $code;
-
-			for my $pkg ( @subisa ) {
-				my $obj = $subobj{ $pkg };
-				$code = $pkg->can( $method ) or next;
+			my ( $self, $method_name ) = @_;
+			my $stash = $$self;
+			my $method;
+			if ( $method = $stash->{ $method_name } and $method = *$method{'CODE'} ) { return $method }
+			if ( $method = $base->can( $method_name ) ) { return $method }
+			for my $obj ( @objisa ) {
+				my $method = $obj->can( $method_name ) or next;
 				my $delegate = sub {
 					splice @_, 0, 1, $obj;
-					goto &$code;
+					goto &$method;
 				};
-				{ no strict 'refs'; *{ "$package\::$method" } = $delegate };
+				*{ $stash->install_glob( $method ) } = $delegate;
 				return $delegate;
 			}
-
 			return;
 		};
 
 		_install AUTOLOAD => sub {
 			our $AUTOLOAD =~ s/.*:://;
-			if ( my $code = $_[0]->can( $AUTOLOAD ) ) {
-				goto &$code;
-			}
-			elsif ( my $fallback = $_[0]->can( 'FALLBACK' ) ) {
-				no strict 'refs';
-				local *{ "$base\::AUTOLOAD" } = \$AUTOLOAD;
-				goto &$fallback;
-			}
-			else {
-				Carp::croak "Method $AUTOLOAD not found in class $base";
-			}
+			my $code = $_[0]->can( $AUTOLOAD ) || $_[0]->can( 'FALLBACK' );
+			goto &$code if $code;
+			Carp::croak "Method $AUTOLOAD not found in class $base";
 		};
 
 		$pkg->can( 'CLASS' )->( @_ );
-
-		my $self = bless {}, $PACKAGE;
 
 		$self->BUILD( @_[ 1 .. $#_ ] ) if $self->can( 'BUILD' );
 
 		$self;
 	};
-}
 
-{
-my $counter = 0;
-sub _make_package {
-	"Class::Closure::_package_" . $counter++;
-}
+	{ no strict 'refs'; *{"$pkg\::new"} = $new }
 }
 
 sub _find_name {
@@ -175,12 +166,7 @@ sub accessor ($@) {
 
 sub extends($) { &$EXTENDS }
 
-sub destroy(&) { _install DESTROY => \Class::Closure::DestroyDelegate->new( $_[0] ) }
-
-package Class::Closure::DestroyDelegate;
-
-sub new { bless $_[1] }
-sub DESTROY { goto &{$_[0]} }
+sub destroy (&) { &method( DESTROY => @_ ) }
 
 1;
 
@@ -327,15 +313,11 @@ The special method BUILD is called whenever a new object is created, with the
 blessed object in the first argument and the rest of the construction
 parameters in the remaining arguments.
 
-Destructors are a little different. Because of the magic that Class::Closure
-has to do to get them to work with inheritance, they have a special syntax:
+Destructors have a special syntax:
 
  sub CLASS {
      destroy { print "Destructing object"; }
  }
-
-Yep, that's all. And you heard me correctly, they work right with inheritance,
-unlike the standard C<DESTROY> method.
 
 =head2 FALLBACK
 
@@ -368,10 +350,6 @@ around the same thing), it installs the sub you give into that symbol
 table position. These closure's aren't "cloned", but just referenced,
 so this doesn't take up the horrible amount of memory you might be
 thinking it does.
-
-Then when all references to the object disappear, it uses L<Symbol>'s
-C<delete_package> to clean out the anonymous package and free memory (and more
-importantly, call C<DESTROY>s) associated with the object.
 
 What does this all mean for you, the user? Since you understand that these
 "declarations" are just sub calls at object construction time, you can create
