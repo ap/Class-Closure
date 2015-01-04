@@ -9,8 +9,6 @@ use strict;
 use Exporter ();
 use Carp ();
 use Symbol ();
-use PadWalker ();
-use Devel::Caller ();
 
 our @ISA = qw(Exporter);
 
@@ -133,6 +131,7 @@ sub _make_package {
 
 sub _find_name {
 	my ($var, $code) = @_;
+	require PadWalker;
 	my %names = reverse %{PadWalker::peek_sub($code)};
 	my $name = $names{$var} || Carp::croak "Couldn't find lexical name for $var";
 	$name =~ s/^[\$\@%]//;
@@ -142,6 +141,7 @@ sub _find_name {
 sub has(\$) : lvalue {
 	my ($var) = @_;
 
+	require Devel::Caller;
 	my $name = _find_name $var, Devel::Caller::caller_cv(1);
 
 	_install $name, sub { $$var };
@@ -151,6 +151,7 @@ sub has(\$) : lvalue {
 sub public(\$) : lvalue {
 	my ($var) = @_;
 
+	require Devel::Caller;
 	my $name = _find_name $var, Devel::Caller::caller_cv(1);
 
 	_install $name, sub : lvalue { $$var };
