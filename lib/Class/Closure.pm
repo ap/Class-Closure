@@ -31,11 +31,11 @@ sub import { _make_new( scalar caller ); goto &Exporter::import }
 sub _install ($$) {
 	my ( $name, $thing ) = @_;
 	no strict 'refs';
-	*{"$PACKAGE\::$name"} = $thing;
+	*{ "$PACKAGE\::$name" } = $thing;
 }
 
 sub _make_new {
-	my ($pkg) = @_;
+	my ( $pkg ) = @_;
 
 	$PACKAGE = $pkg;
 	_install new => sub {
@@ -47,33 +47,29 @@ sub _make_new {
 		my ( @reblessed, @subisa, %subobj );
 
 		_install DESTROY => sub {
-			for (@reblessed) {  # bless them back into their original class
-				bless $_->[0], $_->[1];
-			}
-			Symbol::delete_package($package);
+			bless $_->[0], $_->[1] for @reblessed; # bless them back into their original class
+			Symbol::delete_package( $package );
 		};
 
 		_install isa => sub {
-			my ($self, $class) = @_;
-			do { return 1 if $base->isa($class) };
-			do { return 1 if $_->isa($class) } for @subisa;
+			my ( $self, $class ) = @_;
+			do { return 1 if $base->isa( $class ) };
+			do { return 1 if $_->isa( $class ) } for @subisa;
 			return;
 		};
 
 		local $EXTENDS = sub {
-			my ($var) = @_;
+			my ( $var ) = @_;
 
-			unless (ref $var) {
-				$var = $var->new;
-			}
+			$var = $var->new if not ref $var;
 
-			my $pack = ref $var;
+			my $pkg = ref $var;
 			bless $var, $PACKAGE;  # Rebless for virtual behavior
 
-			push @reblessed, [ $var, $pack ];  # bookkeeping for DESTROY
+			push @reblessed, [ $var, $pkg ];  # bookkeeping for DESTROY
 
-			push @subisa, $pack;
-			$subobj{$pack} = $var;
+			push @subisa, $pkg;
+			$subobj{ $pkg } = $var;
 
 			return;
 		};
@@ -81,30 +77,31 @@ sub _make_new {
 		_install can => sub {
 			my ( $self, $method ) = @_;
 
-			my $code = do { no strict 'refs'; *{"$package\::$method"}{CODE} };
+			my $code = do { no strict 'refs'; *{ "$package\::$method" }{'CODE'} };
 			return $code if $code;
 
 			for my $pkg ( @subisa ) {
-				my $obj = $subobj{$pkg};
-				$code = $pkg->can($method) or next;
+				my $obj = $subobj{ $pkg };
+				$code = $pkg->can( $method ) or next;
 				my $delegate = sub {
 					splice @_, 0, 1, $obj;
 					goto &$code;
 				};
-				{ no strict 'refs'; *{"$package\::$method"} = $delegate };
+				{ no strict 'refs'; *{ "$package\::$method" } = $delegate };
 				return $delegate;
 			}
+
 			return;
 		};
 
 		_install AUTOLOAD => sub {
 			our $AUTOLOAD =~ s/.*:://;
-			if (my $code = $_[0]->can($AUTOLOAD)) {
+			if ( my $code = $_[0]->can( $AUTOLOAD ) ) {
 				goto &$code;
 			}
-			elsif (my $fallback = $_[0]->can('FALLBACK')) {
+			elsif ( my $fallback = $_[0]->can( 'FALLBACK' ) ) {
 				no strict 'refs';
-				local *{"$base\::AUTOLOAD"} = \$AUTOLOAD;
+				local *{ "$base\::AUTOLOAD" } = \$AUTOLOAD;
 				goto &$fallback;
 			}
 			else {
@@ -112,11 +109,11 @@ sub _make_new {
 			}
 		};
 
-		$pkg->can('CLASS')->(@_);
+		$pkg->can( 'CLASS' )->( @_ );
 
-		my $self = bless {} => $PACKAGE;
+		my $self = bless {}, $PACKAGE;
 
-		$self->BUILD(@_[1..$#_]) if $self->can('BUILD');
+		$self->BUILD( @_[ 1 .. $#_ ] ) if $self->can( 'BUILD' );
 
 		$self;
 	};
@@ -130,16 +127,16 @@ sub _make_package {
 }
 
 sub _find_name {
-	my ($var, $code) = @_;
+	my ( $var, $code ) = @_;
 	require PadWalker;
-	my %names = reverse %{PadWalker::peek_sub($code)};
-	my $name = $names{$var} || Carp::croak "Couldn't find lexical name for $var";
+	my %names = reverse %{ PadWalker::peek_sub( $code ) };
+	my $name = $names{ $var } || Carp::croak "Couldn't find lexical name for $var";
 	$name =~ s/^[\$\@%]//;
 	$name;
 }
 
-sub has(\$) : lvalue {
-	my ($var) = @_;
+sub has (\$) : lvalue {
+	my ( $var ) = @_;
 
 	require Devel::Caller;
 	my $name = _find_name $var, Devel::Caller::caller_cv(1);
@@ -148,8 +145,8 @@ sub has(\$) : lvalue {
 	$$var;
 }
 
-sub public(\$) : lvalue {
-	my ($var) = @_;
+sub public (\$) : lvalue {
+	my ( $var ) = @_;
 
 	require Devel::Caller;
 	my $name = _find_name $var, Devel::Caller::caller_cv(1);
@@ -158,7 +155,7 @@ sub public(\$) : lvalue {
 	$$var;
 }
 
-sub method($&) {
+sub method ($&) {
 	&_install;
 	return;
 }
