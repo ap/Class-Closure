@@ -3,7 +3,7 @@ package Class::Closure;
 # ABSTRACT: Encapsulated, declarative class style
 
 use 5.006;
-no warnings;
+use warnings;
 
 use Exporter ();
 use Carp ();
