@@ -26,6 +26,7 @@ our @EXPORT = qw(
 );
 
 our $PACKAGE;
+our $EXTENDS;
 
 sub import { _make_new( scalar caller ); goto &Exporter::import }
 
@@ -60,6 +61,26 @@ sub _make_new {
 			for (@{"$package\::CCSUBISA"}) {
 				return 1 if $_->isa($class);
 			}
+			return;
+		};
+
+		local $EXTENDS = sub {
+			my ($var) = @_;
+
+			unless (ref $var) {
+				$var = $var->new;
+			}
+
+			my $pack = ref $var;
+			bless $var => $PACKAGE;  # Rebless for virtual behavior
+
+			no strict 'refs';
+
+			push @{"$PACKAGE\::CCREBLESSED"}, [ $var => $pack ];  # bookkeeping for DESTROY
+
+			push @{"$PACKAGE\::CCSUBISA"}, $pack;
+			${"$PACKAGE\::CCSUBOBJ"}{$pack} = $var;
+
 			return;
 		};
 
@@ -160,25 +181,7 @@ sub accessor ($@) {
 	return;
 }
 
-sub extends($) {
-	my ($var) = @_;
-
-	unless (ref $var) {
-		$var = $var->new;
-	}
-
-	my $pack = ref $var;
-	bless $var => $PACKAGE;  # Rebless for virtual behavior
-
-	no strict 'refs';
-
-	push @{"$PACKAGE\::CCREBLESSED"}, [ $var => $pack ];  # bookkeeping for DESTROY
-
-	push @{"$PACKAGE\::CCSUBISA"}, $pack;
-	${"$PACKAGE\::CCSUBOBJ"}{$pack} = $var;
-
-	return;
-}
+sub extends($) { &$EXTENDS }
 
 sub destroy(&) {
 	_install DESTROY => \Class::Closure::DestroyDelegate->new($_[0]);
