@@ -141,12 +141,16 @@ sub method($&) {
 	return;
 }
 
-sub accessor($@) {
-	my ($name, %pairs) = @_;
-	Carp::croak "accessor needs 'get' and 'set' attributes" unless $pairs{get} && $pairs{set};
+sub accessor ($@) {
+	my ( $name, %arg ) = @_;
+	Carp::croak "accessor needs 'get' and 'set' attributes" unless $arg{'get'} && $arg{'set'};
+	require Sentinel;
 	*{"$PACKAGE\::$name"} = sub : lvalue {
-		tie my $del, 'Class::Closure::LValueDelegate', $_[0], $pairs{get}, $pairs{set};
-		$del;
+		my $self = shift;
+		Sentinel::sentinel(
+			get => sub { $arg{'get'}->( $self ) },
+			set => sub { $arg{'set'}->( $self, @_ ) },
+		);
 	};
 	return;
 }
@@ -185,21 +189,6 @@ sub new {
 
 sub DESTROY {
 	goto &{$_[0]};
-}
-
-package Class::Closure::LValueDelegate;
-
-sub TIESCALAR {
-	my ($class, $ref, $get, $set) = @_;
-	bless { ref => $ref, get => $get, set => $set } => $class;
-}
-
-sub FETCH {
-	$_[0]->{get}->($_[0]->{ref});
-}
-
-sub STORE {
-	$_[0]->{set}->($_[0]->{ref}, $_[1]);
 }
 
 1;
