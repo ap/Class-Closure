@@ -122,7 +122,7 @@ sub has(\$) : lvalue {
 
 	my $name = _find_name $var, Devel::Caller::caller_cv(1);
 
-	*{"$PACKAGE\::$name"} = sub ($) { $$var };
+	*{"$PACKAGE\::$name"} = sub { $$var };
 	$$var;
 }
 
@@ -132,7 +132,7 @@ sub public(\$) : lvalue {
 	my $name = _find_name $var, Devel::Caller::caller_cv(1);
 	eval << "EOC";
 		package $PACKAGE;
-		sub $name (\$) : lvalue { \$\$var }
+		sub $name : lvalue { \$\$var }
 EOC
 	$$var;
 }
@@ -148,7 +148,7 @@ sub accessor($@) {
 	croak "accessor needs 'get' and 'set' attributes" unless $pairs{get} && $pairs{set};
 	eval << "EOC";
 		package $PACKAGE;
-		sub $name (\$) : lvalue {
+		sub $name : lvalue {
 			tie my \$del => Class::Closure::LValueDelegate,
 					\$_[0], \$pairs{get}, \$pairs{set};
 			\$del;
