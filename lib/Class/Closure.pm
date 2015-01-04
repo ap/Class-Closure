@@ -12,7 +12,6 @@ use Symbol ();
 
 our @ISA = qw(Exporter);
 
-# Yeah, I export a bunch by default. So what? Wanna fight about it?
 our @EXPORT = qw(
 	has
 	public
