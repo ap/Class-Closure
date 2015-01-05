@@ -420,6 +420,10 @@ code. Bug reports/patches welcome.
 
 L<Class::Struct>, L<Class::Classless>
 
+=head1 AUTHOR
+
+Documentation by Luke Palmer.
+
 =head1 COPYRIGHT AND LICENSE
 
 This documentation is copyright (c) 2004 by Luke Palmer.
