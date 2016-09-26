@@ -15,7 +15,7 @@ sub foo {
 
 package B;
 
-use base 'A';
+our @ISA = 'A';
 
 sub new {
 	my ($class, $cons) = @_;
