@@ -1,5 +1,4 @@
 requires 'perl', '5.006';
-requires 'base';
 requires 'lib';
 requires 'strict';
 requires 'warnings';
