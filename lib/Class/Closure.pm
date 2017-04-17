@@ -186,6 +186,8 @@ sub DESTROY { goto &{$_[0]} }
 
 __END__
 
+=pod
+
 =head1 SYNOPSIS
 
  package Dog;
