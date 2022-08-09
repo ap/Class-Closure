@@ -1,6 +1,5 @@
 package Class::Closure;
-
-# ABSTRACT: Encapsulated, declarative class style
+our $VERSION = '0.302';
 
 use 5.006;
 use warnings;
@@ -178,6 +177,7 @@ sub extends($) { &$EXTENDS }
 sub destroy(&) { _install DESTROY => \Class::Closure::DestroyDelegate->new( $_[0] ) }
 
 package Class::Closure::DestroyDelegate;
+our $VERSION = '0.302';
 
 sub new { bless $_[1] }
 sub DESTROY { goto &{$_[0]} }
@@ -185,6 +185,14 @@ sub DESTROY { goto &{$_[0]} }
 1;
 
 __END__
+
+=pod
+
+=encoding UTF-8
+
+=head1 NAME
+
+Class::Closure - Encapsulated, declarative class style
 
 =head1 SYNOPSIS
 
@@ -420,10 +428,4 @@ code. Bug reports/patches welcome.
 
 L<Class::Struct>, L<Class::Classless>
 
-=head1 AUTHOR
-
-Documentation by Luke Palmer.
-
-=head1 COPYRIGHT AND LICENSE
-
-This documentation is copyright (c) 2004 by Luke Palmer.
+=cut
