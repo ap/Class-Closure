@@ -9,8 +9,6 @@ use Exporter ();
 use Carp ();
 use Symbol ();
 
-our @ISA = qw(Exporter);
-
 our @EXPORT = qw(
 	has
 	public
