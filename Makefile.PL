@@ -18,8 +18,6 @@ my %META = (
 		runtime => {
 			requires => {qw(
 				perl 5.006
-				strict 0
-				warnings 0
 				Carp 0
 				Devel::Caller 0
 				Exporter 0
@@ -33,11 +31,6 @@ my %META = (
 				File::Find 0
 				File::Temp 0
 				Test::More 0.88
-			)},
-		},
-		configure => {
-			requires => {qw(
-				ExtUtils::MakeMaker 0
 			)},
 		},
 	},
