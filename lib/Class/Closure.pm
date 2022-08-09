@@ -1,9 +1,7 @@
+use 5.006; use warnings; use strict;
+
 package Class::Closure;
 our $VERSION = '0.302';
-
-use 5.006;
-use warnings;
-use strict;
 
 use Exporter ();
 use Carp ();
