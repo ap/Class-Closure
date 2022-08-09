@@ -1,7 +1,7 @@
 use 5.006; use strict; use warnings;
 
-my $sc = q<github.com/ap/Class-Closure>;
-my $bt = q<http://github.com/ap/Class-Closure/issues>;
+my $sc = q<https://github.com/ap/Class-Closure>;
+my $bt = q<https://rt.cpan.org/Public/Dist/Display.html?Name=Class-Closure>;
 
 my %META = (
 	name        => 'Class-Closure',
@@ -9,8 +9,8 @@ my %META = (
 	x_copyright => { holder => 'Aristotle Pagaltzis', year => 2015 },
 	license     => 'perl_5',
 	resources   => {
-		homepage   => "http://$sc",
-		repository => { type => 'git', url => "git://$sc" },
+		license    => [ 'http://dev.perl.org/licenses/' ],
+		repository => { type => 'git', url => "$sc.git", web => $sc },
 		bugtracker => { web => $bt },
 	},
 	dynamic_config => 0,
