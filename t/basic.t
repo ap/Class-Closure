@@ -1,12 +1,10 @@
 use Test::More 0.88; # for done_testing
 
-BEGIN { require_ok('Class::Closure') }
-
 my ( $foodestr, $bardestr );
 
 package Foo;
 
-BEGIN { Class::Closure->import }
+use Class::Closure;
 
 sub CLASS {
 	destroy { $foodestr++ };
@@ -30,7 +28,7 @@ sub g : lvalue { $_[0]->{x} }
 
 package Bar;
 
-BEGIN { Class::Closure->import }
+use Class::Closure;
 
 sub CLASS {
 	destroy { $bardestr++ };
