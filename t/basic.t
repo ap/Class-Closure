@@ -1,4 +1,4 @@
-use Test::More 0.88; # for done_testing
+use Test::More tests => 18;
 
 my ( $foodestr, $bardestr );
 
@@ -68,5 +68,3 @@ is $bar->nada, 69,         'Fallback';
 is $bar->c, 3,             'Extends';
 is $bar->b, 13,            'Build/Extends';
 is $bar->f, 84,            'Extends/Represents';
-
-done_testing;
